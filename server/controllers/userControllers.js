@@ -143,7 +143,7 @@ exports.updateUserProfile = catchAsyncErrors(async (req, res, next) => {
 
 // Update User Password
 exports.updatePassoword = catchAsyncErrors(async (req, res, next) => {
-  // console.log(req.user.id);
+  console.log(req.user.id);
 
   // console.log(req.body);
   const user = await User.findById(req.user.id).select("+password");
