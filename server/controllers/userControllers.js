@@ -2,11 +2,18 @@ const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const User = require("../model/user");
 const sendToken = require("../utils/jwtToken");
 const ErrorHandler = require("../utils/errorHandler");
-const user = require("../model/user");
+const userInfo = require("../utils/userInfo");
+const {
+  loginBody,
+  registerBody,
+  roleBody,
+  profileBody,
+} = require("../utils/userBody");
 
 // Register a User
 exports.registerUser = catchAsyncErrors(async (req, res, next) => {
-  const { name, email, password } = req.body;
+  const register = registerBody(req.body);
+  const { name, email, password } = register;
 
   const user = await User.create({
     name,
@@ -19,11 +26,13 @@ exports.registerUser = catchAsyncErrors(async (req, res, next) => {
 
 // Login User
 exports.loginUser = catchAsyncErrors(async (req, res, next) => {
-  const { email, password } = req.body;
+  const login = loginBody(req.body);
+
+  const { email, password } = login;
 
   // check if user has given email & password both
   if (!email || !password) {
-    return next(new ErrorHandler("Please enter email & password", 400));
+    return next(new ErrorHandler("Please enter userEmail & userPassword", 400));
   }
 
   const user = await User.findOne({ email }).select("+password");
@@ -57,20 +66,24 @@ exports.logout = catchAsyncErrors(async (req, res, next) => {
 // Get User Details
 exports.getUserDetails = catchAsyncErrors(async (req, res, next) => {
   const user = await User.findById(req.user.id);
+  const formattedUser = userInfo(user);
 
   res.status(200).json({
     success: true,
-    user,
+    user: formattedUser,
   });
 });
 
 // Get All User's Details -- Admin
 exports.getAllUsers = catchAsyncErrors(async (req, res, next) => {
-  const user = await User.find();
+  const users = await User.find();
+
+  // Map the users to the new format
+  const formattedUsers = users.map((user) => userInfo(user));
 
   res.status(200).json({
     success: true,
-    user,
+    users: formattedUsers,
   });
 });
 
@@ -82,19 +95,20 @@ exports.getUser = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Invalid Id", 401));
   }
 
+  const formattedUser = userInfo(user);
+
   res.status(200).json({
     success: true,
-    user,
+    user: formattedUser,
   });
 });
 
 // Update User Role -- Admin
 exports.updateRole = catchAsyncErrors(async (req, res, next) => {
-  const newRole = {
-    role: req.body.role,
-  };
+  const newRole = roleBody(req.body);
+  const user = req.params.id;
 
-  await User.findByIdAndUpdate(req.params.id, newRole, {
+  await User.findByIdAndUpdate(user, newRole, {
     new: true,
     runValidators: true,
     useFindAndModify: false,
@@ -125,10 +139,7 @@ exports.deleteUser = catchAsyncErrors(async (req, res, next) => {
 
 // Update user Profile
 exports.updateUserProfile = catchAsyncErrors(async (req, res, next) => {
-  const newUserData = {
-    name: req.body.name,
-    email: req.body.email,
-  };
+  const newUserData = profileBody(req.body);
 
   await User.findByIdAndUpdate(req.user.id, newUserData, {
     new: true,

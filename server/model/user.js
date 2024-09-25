@@ -2,35 +2,46 @@ const mongoose = require("mongoose");
 const bcryptjs = require("bcryptjs");
 const validator = require("validator");
 const jwt = require("jsonwebtoken");
+const { encrypt, decrypt } = require("./cipher");
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, "Please enter your Name"],
-    maxLength: [30, "Name cannot exceed 30 characters"],
-    minLength: [4, "Name should have minimum 4 characters"],
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Please enter your Name"],
+      maxLength: [30, "Name cannot exceed 30 characters"],
+      minLength: [4, "Name should have minimum 4 characters"],
+    },
+
+    email: {
+      type: String,
+      required: [true, "Please enter your Mail"],
+      unique: true,
+      set: encrypt,
+      get: decrypt,
+    },
+
+    password: {
+      type: String,
+      required: [true, "Please enter your Password"],
+      minLength: [8, "Password should be of minimum 8 characters"],
+      select: false,
+    },
+
+    role: {
+      type: String,
+      default: "user",
+    },
   },
+  {
+    versionKey: false,
+    toObject: { getters: true, setters: true },
+    toJSON: { getters: true, setters: true },
+    runSettersOnQuery: true,
+  }
+);
 
-  email: {
-    type: String,
-    required: [true, "Please enter your Mail"],
-    unique: true,
-    validate: [validator.isEmail, "Please enter valid Mail"],
-  },
-
-  password: {
-    type: String,
-    required: [true, "Please enter your Password"],
-    minLength: [8, "Password should be of minimum 8 characters"],
-    select: false,
-  },
-
-  role: {
-    type: String,
-    default: "user",
-  },
-});
-
+// Password Hashing
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     next();
